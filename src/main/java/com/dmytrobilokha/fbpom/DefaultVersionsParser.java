@@ -40,16 +40,12 @@ public class DefaultVersionsParser {
         }
     }
 
-    public void writeVersions(Writer writer) throws IOException {
+    public String getVersionsString() {
         if (versions.isEmpty()) {
-            return;
+            return "";
         }
-        writer.append(MakefileUtil.COMMENT_SYMBOL)
-                .append(" Default versions")
-                .append(MakefileUtil.NEW_LINE)
-                .append(DEFAULT_VERSIONS_TOKEN)
-                .append(MakefileUtil.formatTokens(versions))
-                .append(MakefileUtil.NEW_LINE);
+        return MakefileUtil.COMMENT_SYMBOL + " Default versions" + MakefileUtil.NEW_LINE + DEFAULT_VERSIONS_TOKEN
+                + MakefileUtil.formatTokens(versions) + MakefileUtil.NEW_LINE;
     }
 
 }

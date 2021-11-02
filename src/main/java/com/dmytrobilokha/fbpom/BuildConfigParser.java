@@ -97,7 +97,7 @@ public class BuildConfigParser {
 
     public void printMergedMakeFile(PrintWriter pw) {
         try {
-            defaultVersionsParser.writeVersions(pw);
+            pw.append(defaultVersionsParser.getVersionsString());
             globalOptionsParser.writeOptions(pw);
             List<PortOptionsParser> portList = new ArrayList<>(optionsParsersMap.values());
             Collections.sort(portList);
