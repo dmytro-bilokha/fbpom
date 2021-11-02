@@ -3,7 +3,11 @@
         "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
         "https://checkstyle.org/dtds/configuration_1_3.dtd">
 
-<module name = "Checker">
+<module name="Checker">
+
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="module\-info\.java$"/>
+    </module>
 
     <property name="charset" value="UTF-8"/>
     <property name="severity" value="error"/>
@@ -12,6 +16,11 @@
     <!-- No too long files -->
     <module name="FileLength">
         <property name="max" value="1500"/>
+    </module>
+
+    <!-- No super-length lines -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
     </module>
 
     <!-- No tabs in the source code -->
@@ -156,7 +165,11 @@
         <module name="UnusedImports"/>
 
         <!-- Avoid too complex code -->
-        <module name="ClassFanOutComplexity"/>
+        <module name="ClassFanOutComplexity">
+            <property name="excludedPackages"
+                value="java.net, java.net.http, java.util, java.util.stream, java.time, java.time.format, javax.annotation, java.util.function, javax.json.bind"/>
+            <property name="max" value="25"/>
+        </module>
         <module name="CyclomaticComplexity"/>
         <module name="JavaNCSS"/>
 
@@ -175,9 +188,6 @@
         <!-- File name should correspond to the class name -->
         <module name="OuterTypeFilename"/>
 
-        <!-- No end-line comments -->
-        <module name="TrailingComment"/>
-
         <!-- 10L and not 10l in constants -->
         <module name="UpperEll"/>
 
@@ -189,11 +199,6 @@
 
         <!-- No too long anonymous inner classes -->
         <module name="AnonInnerLength"/>
-
-        <!-- No super-length lines -->
-        <module name="LineLength">
-            <property name="max" value="120"/>
-        </module>
 
         <!-- No too long methods -->
         <module name="MethodLength"/>
