@@ -10,7 +10,7 @@
     <name>fbpom</name>
 
     <properties>
-        <application.bootstrapClass>com.dmytrobilokha.fbpom.FreeBsdPortOptionsMerger</application.bootstrapClass>
+        <application.bootstrapClass>com.dmytrobilokha.fbpom.FbpomCli</application.bootstrapClass>
 
         <maven.jar.plugin.version>3.0.2</maven.jar.plugin.version>
         <maven.assembly.plugin.version>3.0.0</maven.assembly.plugin.version>

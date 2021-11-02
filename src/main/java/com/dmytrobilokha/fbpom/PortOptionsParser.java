@@ -10,16 +10,12 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class BsdPort implements Comparable<BsdPort> {
+public class PortOptionsParser implements Comparable<PortOptionsParser> {
 
     private static final String SET = "_SET+=";
     private static final String UNSET = "_UNSET+=";
-    private static final Pattern SEPARATION_PATTERN = Pattern.compile("\\s");
     private static final Pattern OPTION_PATTERN = Pattern.compile("[\\p{Alnum}_]+");
     private static final Pattern CATEGORY_NAME_SEPARATOR_PATTERN = Pattern.compile("_");
-    private static final String NEW_LINE = System.lineSeparator();
-    private static final String NEW_OPTION_LINE = "\\" + System.lineSeparator() + "\t\t\t";
-    private static final int NEW_LINE_TRESHOLD = 50;
 
     private final Map<String, OptionStatus> optionsMap = new HashMap<>();
     private final String name;
@@ -29,29 +25,48 @@ public class BsdPort implements Comparable<BsdPort> {
     private final String outOptionsSet;
     private final String outOptionsUnset;
 
-    public BsdPort(String name) {
+    private PortOptionsParser(String name,
+                              String slashedName,
+                              String inOptionsSet,
+                              String inOptionsUnset,
+                              String outOptionsSet,
+                              String outOptionsUnset) {
         this.name = name;
-        this.slashedName = CATEGORY_NAME_SEPARATOR_PATTERN.matcher(name).replaceFirst("/");
-        this.inOptionsSet = "OPTIONS_FILE_SET+=";
-        this.inOptionsUnset = "OPTIONS_FILE_UNSET+=";
-        this.outOptionsSet = name + SET;
-        this.outOptionsUnset = name + UNSET;
+        this.slashedName = slashedName;
+        this.inOptionsSet = inOptionsSet;
+        this.inOptionsUnset = inOptionsUnset;
+        this.outOptionsSet = outOptionsSet;
+        this.outOptionsUnset = outOptionsUnset;
     }
 
-    public BsdPort() {
-        this.name = "OPTIONS";
-        this.slashedName = "Global ports";
-        this.inOptionsSet = name + SET;
-        this.inOptionsUnset = name + UNSET;
-        this.outOptionsSet = name + SET;
-        this.outOptionsUnset = name + UNSET;
+    public static PortOptionsParser forRegularPort(String portName) {
+        return new PortOptionsParser(
+                portName,
+                CATEGORY_NAME_SEPARATOR_PATTERN.matcher(portName).replaceFirst("/"),
+                "OPTIONS_FILE_SET+=",
+                "OPTIONS_FILE_UNSET+=",
+                portName + SET,
+                portName + UNSET
+        );
+    }
+
+    public static PortOptionsParser forGlobalOptions() {
+        String prefix = "OPTIONS";
+        return new PortOptionsParser(
+                prefix,
+                "Global ports",
+                prefix + SET,
+                prefix + UNSET,
+                prefix + SET,
+                prefix + UNSET
+        );
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        BsdPort that = (BsdPort) o;
+        PortOptionsParser that = (PortOptionsParser) o;
         return Objects.equals(name, that.name);
     }
 
@@ -72,9 +87,9 @@ public class BsdPort implements Comparable<BsdPort> {
                 line = line.substring(inOptionsUnset.length());
             }
             if (lineStatus != OptionStatus.NOT_DEFINED) {
-                String[] options = SEPARATION_PATTERN.split(line);
+                String[] options = MakefileUtil.splitTokens(line);
                 addOptions(lineStatus, options);
-                if (options.length > 0 && !"\\".equals(options[options.length - 1]))
+                if (options.length > 0 && !MakefileUtil.NEXT_LINE.equals(options[options.length - 1]))
                     lineStatus = OptionStatus.NOT_DEFINED;
             }
         }
@@ -92,11 +107,11 @@ public class BsdPort implements Comparable<BsdPort> {
         } else {
             return;
         }
-        String[] options = SEPARATION_PATTERN.split(line);
+        String[] options = MakefileUtil.splitTokens(line);
         addOptions(lineStatus, options);
-        while ((options.length == 0 || "\\".equals(options[options.length - 1])) && lineIterator.hasNext()) {
+        while (MakefileUtil.isMoreTokens(options, lineIterator)) {
             line = lineIterator.next().trim();
-            options = SEPARATION_PATTERN.split(line);
+            options = MakefileUtil.splitTokens(line);
             addOptions(lineStatus, options);
         }
     }
@@ -111,7 +126,7 @@ public class BsdPort implements Comparable<BsdPort> {
         }
     }
 
-    public void removeDuplicatingOptions(BsdPort parentPort) {
+    public void removeDuplicatingOptions(PortOptionsParser parentPort) {
         for (Map.Entry<String, OptionStatus> parentOptionEntry : parentPort.optionsMap.entrySet()) {
             optionsMap.remove(parentOptionEntry.getKey(), parentOptionEntry.getValue());
         }
@@ -121,15 +136,15 @@ public class BsdPort implements Comparable<BsdPort> {
         writer.append(getOptionsComment())
                 .append(getSetOptionsString())
                 .append(getUnsetOptionsString())
-                .append(NEW_LINE);
+                .append(MakefileUtil.NEW_LINE);
     }
 
     private String getOptionsComment() {
-        return "# " + slashedName + " options" + NEW_LINE;
+        return MakefileUtil.COMMENT_SYMBOL + " " + slashedName + " options" + MakefileUtil.NEW_LINE;
     }
 
     private String getSetOptionsString() {
-        String optionsString = formatOptions(getSortedOptionsWithStatus(OptionStatus.SET));
+        String optionsString = MakefileUtil.formatTokens(getSortedOptionsWithStatus(OptionStatus.SET));
         if (optionsString.isEmpty())
             return optionsString;
         return outOptionsSet + optionsString;
@@ -146,29 +161,10 @@ public class BsdPort implements Comparable<BsdPort> {
     }
 
     private String getUnsetOptionsString() {
-        String optionsString = formatOptions(getSortedOptionsWithStatus(OptionStatus.UNSET));
+        String optionsString = MakefileUtil.formatTokens(getSortedOptionsWithStatus(OptionStatus.UNSET));
         if (optionsString.isEmpty())
             return optionsString;
         return outOptionsUnset + optionsString;
-    }
-
-    private String formatOptions(List<String> options) {
-        if (options.isEmpty())
-            return "";
-        StringBuilder outputBuilder = new StringBuilder("\t");
-        int lineLength = 0;
-        for (String option : options) {
-            if (lineLength + option.length() > NEW_LINE_TRESHOLD && option.length() < NEW_LINE_TRESHOLD) {
-                outputBuilder.append(NEW_OPTION_LINE);
-                lineLength = 0;
-            }
-            outputBuilder
-                    .append(option)
-                    .append(' ');
-            lineLength += option.length() + 1;
-        }
-        outputBuilder.append(NEW_LINE);
-        return outputBuilder.toString();
     }
 
     public String getName() {
@@ -176,7 +172,7 @@ public class BsdPort implements Comparable<BsdPort> {
     }
 
     @Override
-    public int compareTo(BsdPort o) {
+    public int compareTo(PortOptionsParser o) {
         return this.name.compareTo(o.name);
     }
 
