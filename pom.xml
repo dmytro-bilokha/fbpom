@@ -12,18 +12,20 @@
     <properties>
         <application.bootstrapClass>com.dmytrobilokha.fbpom.FbpomCli</application.bootstrapClass>
 
-        <maven.jar.plugin.version>3.0.2</maven.jar.plugin.version>
-        <maven.assembly.plugin.version>3.0.0</maven.assembly.plugin.version>
-        <maven.checkstyle.plugin.version>3.0.0</maven.checkstyle.plugin.version>
-        <maven.enforcer.plugin.version>3.0.0-M2</maven.enforcer.plugin.version>
-        <maven.surefire.plugin.version>3.0.0-M3</maven.surefire.plugin.version>
+        <maven.jar.plugin.version>3.2.0</maven.jar.plugin.version>
+        <maven.assembly.plugin.version>3.3.0</maven.assembly.plugin.version>
+        <maven.checkstyle.plugin.version>3.1.1</maven.checkstyle.plugin.version>
+        <maven.enforcer.plugin.version>3.0.0-M3</maven.enforcer.plugin.version>
+        <maven.surefire.plugin.version>3.0.0-M5</maven.surefire.plugin.version>
+        <maven.versions.plugin.version>2.7</maven.versions.plugin.version>
+
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <testng.version>7.4.0</testng.version>
-        <mockito.version>3.8.0</mockito.version>
+        <mockito.version>4.0.0</mockito.version>
     </properties>
 
     <dependencies>
@@ -80,6 +82,9 @@
                                 <banDuplicatePomDependencyVersions/>
                                 <dependencyConvergence/>
                                 <requireUpperBoundDeps/>
+                                <requireMavenVersion>
+                                    <version>3.6.3</version>
+                                </requireMavenVersion>
                             </rules>
                             <fail>true</fail>
                         </configuration>
@@ -124,6 +129,11 @@
                     </suiteXmlFiles>
                     <threadCount>1</threadCount>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>${maven.versions.plugin.version}</version>
             </plugin>
         </plugins>
     </build>
