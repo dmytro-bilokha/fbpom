@@ -82,8 +82,9 @@ public class BuildConfigParser {
 
     private void parseOptionsDirectory(Path optionsDirectory) {
         Path optionsFilePath = optionsDirectory.resolve(OPTIONS_FILE);
-        if (!(Files.isReadable(optionsFilePath) && Files.isRegularFile(optionsFilePath)))
+        if (!(Files.isReadable(optionsFilePath) && Files.isRegularFile(optionsFilePath))) {
             return;
+        }
         String portName = optionsDirectory.getFileName().toString();
         PortOptionsParser port = optionsParsersMap.computeIfAbsent(portName, PortOptionsParser::forRegularPort);
         port.parseOptionsFile(fsService.getFileLinesIterator(optionsFilePath));
@@ -96,16 +97,12 @@ public class BuildConfigParser {
     }
 
     public void printMergedMakeFile(PrintWriter pw) {
-        try {
-            pw.append(defaultVersionsParser.getVersionsString());
-            globalOptionsParser.writeOptions(pw);
-            List<PortOptionsParser> portList = new ArrayList<>(optionsParsersMap.values());
-            Collections.sort(portList);
-            for (PortOptionsParser port : portList) {
-                port.writeOptions(pw);
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to print merged make file", e);
+        pw.append(defaultVersionsParser.getVersionsString());
+        pw.append(globalOptionsParser.getOptionsString());
+        List<PortOptionsParser> portList = new ArrayList<>(optionsParsersMap.values());
+        Collections.sort(portList);
+        for (PortOptionsParser port : portList) {
+            pw.append(port.getOptionsString());
         }
     }
 

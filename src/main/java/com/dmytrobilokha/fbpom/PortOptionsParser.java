@@ -14,7 +14,7 @@ public class PortOptionsParser implements Comparable<PortOptionsParser> {
 
     private static final String SET = "_SET+=";
     private static final String UNSET = "_UNSET+=";
-    private static final Pattern OPTION_PATTERN = Pattern.compile("[\\p{Alnum}_]+");
+    private static final Pattern OPTION_PATTERN = Pattern.compile("[\\p{Alnum}]+[\\p{Alnum}_-]+[\\p{Alnum}]+");
     private static final Pattern CATEGORY_NAME_SEPARATOR_PATTERN = Pattern.compile("_");
 
     private final Map<String, OptionStatus> optionsMap = new HashMap<>();
@@ -132,11 +132,8 @@ public class PortOptionsParser implements Comparable<PortOptionsParser> {
         }
     }
 
-    public void writeOptions(Writer writer) throws IOException {
-        writer.append(getOptionsComment())
-                .append(getSetOptionsString())
-                .append(getUnsetOptionsString())
-                .append(MakefileUtil.NEW_LINE);
+    public String getOptionsString() {
+        return getOptionsComment() + getSetOptionsString() + getUnsetOptionsString() + MakefileUtil.NEW_LINE;
     }
 
     private String getOptionsComment() {
