@@ -8,9 +8,9 @@ import java.util.Collections;
 @Test(groups = "unit")
 public class DefaultVersionsParserTest {
 
-    private static final String SIMPLE_VERSIONS = "DEFAULT_VERSIONS+=	java=11";
-    private static final String DOUBLE_VERSIONS = "DEFAULT_VERSIONS+=	java=11 python=3.8";
-    private static final String DOUBLE_MULTILINE_VERSIONS = "DEFAULT_VERSIONS+=	java=11 \\" + System.lineSeparator()
+    private static final String SIMPLE_VERSIONS = "DEFAULT_VERSIONS+=\tjava=11";
+    private static final String DOUBLE_VERSIONS = "DEFAULT_VERSIONS+=\tjava=11 python=3.8";
+    private static final String DOUBLE_MULTILINE_VERSIONS = "DEFAULT_VERSIONS+= java=11\t\\" + System.lineSeparator()
             + System.lineSeparator()
             + "python=3.8";
 
@@ -50,7 +50,7 @@ public class DefaultVersionsParserTest {
     @Test(groups = "default-parser-line-recognition")
     public void recognizesNonValidVersionLine() {
         var parser = new DefaultVersionsParser();
-        Assert.assertFalse(parser.isDefaultVersionsLine("OPTIONS_SET+=	java=11"));
+        Assert.assertFalse(parser.isDefaultVersionsLine("OPTIONS_SET+=\tjava=11"));
     }
 
 }

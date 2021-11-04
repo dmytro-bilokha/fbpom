@@ -40,7 +40,7 @@ public class MakefileUtil {
     }
 
     public static boolean isMoreTokens(String[] tokens, Iterator<String> lineIterator) {
-        return (tokens.length == 0 || NEW_LINE.equals(tokens[tokens.length - 1])) && lineIterator.hasNext();
+        return (tokens.length == 0 || NEXT_LINE.equals(tokens[tokens.length - 1])) && lineIterator.hasNext();
     }
 
 }

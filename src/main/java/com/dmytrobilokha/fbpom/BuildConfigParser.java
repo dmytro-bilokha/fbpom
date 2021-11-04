@@ -1,6 +1,5 @@
 package com.dmytrobilokha.fbpom;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +13,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+//TODO: Change this to have separate makefile parser, option file parser and results representing structure,
+//then it should be way easier to write tests.
+//TODO: implement integration test which checks that if tool reads its out output as input, there are no changes
 public class BuildConfigParser {
 
     private static final Path OPTIONS_FILE = Paths.get("options");
@@ -41,6 +43,7 @@ public class BuildConfigParser {
         deduplicateOptions();
     }
 
+    //TODO: refactor, it is a bit nasty
     private void parseMakeFile() {
         if (!fsService.isReadableRegularFile(makeFilePath)) {
             return;
