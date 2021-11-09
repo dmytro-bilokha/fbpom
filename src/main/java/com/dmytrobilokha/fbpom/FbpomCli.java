@@ -1,6 +1,5 @@
 package com.dmytrobilokha.fbpom;
 
-import java.io.PrintWriter;
 import java.nio.file.Paths;
 
 public class FbpomCli {
@@ -19,15 +18,12 @@ public class FbpomCli {
             System.exit(1);
         }
         String prefix = args[0];
-        BuildConfigParser parser = new BuildConfigParser(
+        BuildConfigParserRunner parserRunner = new BuildConfigParserRunner(
                 Paths.get(BASE_PATH + prefix + MAKE_CONF_SUFFIX),
                 Paths.get(BASE_PATH + prefix + OPTIONS_DIRECTORY_SUFFIX),
                 new FsService()
         );
-        parser.parse();
-        try (PrintWriter pw = new PrintWriter(System.out)) {
-            parser.printMergedMakeFile(pw);
-        }
+        System.out.println(parserRunner.runParser());
     }
 
 }

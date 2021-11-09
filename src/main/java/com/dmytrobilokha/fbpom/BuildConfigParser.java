@@ -1,112 +1,140 @@
 package com.dmytrobilokha.fbpom;
 
-import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-//TODO: Change this to have separate makefile parser, option file parser and results representing structure,
-//then it should be way easier to write tests.
-//TODO: implement integration test which checks that if tool reads its out output as input, there are no changes
 public class BuildConfigParser {
 
-    private static final Path OPTIONS_FILE = Paths.get("options");
-    private static final Pattern SET_UNSET_PATTERN = Pattern.compile("_(UN)?SET\\+=");
+    private static final Pattern SET_PATTERN = Pattern.compile("_SET\\+=");
+    private static final Pattern UNSET_PATTERN = Pattern.compile("_UNSET\\+=");
+    private static final Pattern VERSION_PATTERN = Pattern.compile("[.\\p{Alnum}_-]+=[.\\p{Alnum}_-]+");
+    private static final Pattern OPTION_PATTERN = Pattern.compile("[\\p{Alnum}]+[\\p{Alnum}_-]+[\\p{Alnum}]+");
+    private static final String OPTIONS_FILE_SET = "OPTIONS_FILE_SET+=";
+    private static final String OPTIONS_FILE_UNSET = "OPTIONS_FILE_UNSET+=";
+    private static final Pattern SEPARATION_PATTERN = Pattern.compile("\\s");
 
-    private final Path makeFilePath;
-    private final Path optionsDirectoryPath;
-    private final FsService fsService;
+    private final PortsBuildConfig buildConfig;
 
-    private final DefaultVersionsParser defaultVersionsParser = new DefaultVersionsParser();
-    private final PortOptionsParser globalOptionsParser = PortOptionsParser.forGlobalOptions();
-    private final Map<String, PortOptionsParser> optionsParsersMap = new HashMap<>();
-
-    public BuildConfigParser(Path makeFilePath,
-                             Path optionsDirectoryPath,
-                             FsService fsService) {
-        this.makeFilePath = makeFilePath;
-        this.optionsDirectoryPath = optionsDirectoryPath;
-        this.fsService = fsService;
+    public BuildConfigParser(PortsBuildConfig buildConfig) {
+        this.buildConfig = buildConfig;
     }
 
-    public void parse() {
-        parseMakeFile();
-        parseOptionsFiles();
-        deduplicateOptions();
-    }
-
-    //TODO: refactor, it is a bit nasty
-    private void parseMakeFile() {
-        if (!fsService.isReadableRegularFile(makeFilePath)) {
-            return;
-        }
-        for (Iterator<String> makeFileLinesIterator = fsService.getFileLinesIterator(makeFilePath);
-             makeFileLinesIterator.hasNext();) {
-            String makeFileLine = makeFileLinesIterator.next().trim();
-            if (makeFileLine.startsWith(MakefileUtil.COMMENT_SYMBOL)) {
-                continue;
-            }
-            String portName;
-            Matcher matcher = SET_UNSET_PATTERN.matcher(makeFileLine);
-            if (!matcher.find()) {
-                if (!defaultVersionsParser.isDefaultVersionsLine(makeFileLine)) {
-                    continue;
-                }
-                defaultVersionsParser.parseMakeFile(makeFileLine, makeFileLinesIterator);
-                continue;
-            }
-            portName = makeFileLine.substring(0, matcher.start());
-            if (globalOptionsParser.getName().equals(portName)) {
-                globalOptionsParser.parseMakeFile(makeFileLine, makeFileLinesIterator);
-            } else {
-                PortOptionsParser portOptionsParser = optionsParsersMap
-                        .computeIfAbsent(portName, PortOptionsParser::forRegularPort);
-                portOptionsParser.parseMakeFile(makeFileLine, makeFileLinesIterator);
+    public void parseMakefile(Iterator<String> makefileLinesIterator) {
+        while (makefileLinesIterator.hasNext()) {
+            String makefileLine = makefileLinesIterator.next().strip();
+            if (!makefileLine.startsWith(PortsBuildConfig.COMMENT_SYMBOL)) {
+                parseMakefileChunk(makefileLine, makefileLinesIterator);
             }
         }
     }
 
-    private void parseOptionsFiles() {
-        if (!fsService.isReadableExecutableDirectory(optionsDirectoryPath)) {
+    private void parseMakefileChunk(String makefileLine, Iterator<String> makefileLinesIterator) {
+        if (makefileLine.startsWith(PortsBuildConfig.DEFAULT_VERSIONS_TOKEN)) {
+            parseMakefileDefaultVersions(
+                    makefileLine.substring(PortsBuildConfig.DEFAULT_VERSIONS_TOKEN.length()), makefileLinesIterator);
             return;
         }
-        fsService.getDirectoryListing(optionsDirectoryPath)
-                .filter(fsService::isReadableExecutableDirectory)
-                .forEach(this::parseOptionsDirectory);
-    }
-
-    private void parseOptionsDirectory(Path optionsDirectory) {
-        Path optionsFilePath = optionsDirectory.resolve(OPTIONS_FILE);
-        if (!(Files.isReadable(optionsFilePath) && Files.isRegularFile(optionsFilePath))) {
+        var setMatcher = SET_PATTERN.matcher(makefileLine);
+        var unsetMatcher = UNSET_PATTERN.matcher(makefileLine);
+        OptionStatus optionsStatus;
+        String portId;
+        String optionsLine;
+        if (setMatcher.find()) {
+            optionsStatus = OptionStatus.SET;
+            portId = makefileLine.substring(0, setMatcher.start());
+            optionsLine = makefileLine.substring(setMatcher.end());
+        } else if (unsetMatcher.find()) {
+            optionsStatus = OptionStatus.UNSET;
+            portId = makefileLine.substring(0, unsetMatcher.start());
+            optionsLine = makefileLine.substring(unsetMatcher.end());
+        } else {
             return;
         }
-        String portName = optionsDirectory.getFileName().toString();
-        PortOptionsParser port = optionsParsersMap.computeIfAbsent(portName, PortOptionsParser::forRegularPort);
-        port.parseOptionsFile(fsService.getFileLinesIterator(optionsFilePath));
+        if (PortsBuildConfig.GLOBAL_PORT_OPTIONS.equals(portId)) {
+            parsePortOptions(optionsStatus, buildConfig.getGlobalOptionsState(), optionsLine, makefileLinesIterator);
+            return;
+        }
+        parsePortOptions(
+                optionsStatus,
+                buildConfig.createIfAbsentPortOptionsState(portId),
+                optionsLine,
+                makefileLinesIterator);
     }
 
-    private void deduplicateOptions() {
-        for (PortOptionsParser port : optionsParsersMap.values()) {
-            port.removeDuplicatingOptions(globalOptionsParser);
+    private void parseMakefileDefaultVersions(String line, Iterator<String> makefileLinesIterator) {
+        buildConfig.getDefaultVersions().addAll(
+                        readConfigItems(line, makefileLinesIterator)
+                                .stream()
+                                .filter(v -> VERSION_PATTERN.matcher(v).matches())
+                                .collect(Collectors.toSet()));
+    }
+
+    private void parsePortOptions(
+            OptionStatus optionsStatus,
+            OptionsState optionsState,
+            String optionsLine,
+            Iterator<String> makefileLinesIterator
+    ) {
+        var options = readConfigItems(optionsLine, makefileLinesIterator)
+                .stream()
+                .filter(o -> OPTION_PATTERN.matcher(o).matches())
+                .collect(Collectors.toSet());
+        if (optionsStatus == OptionStatus.SET) {
+            optionsState.addEnabledOptions(options);
+            return;
+        }
+        if (optionsStatus == OptionStatus.UNSET) {
+            optionsState.addDisabledOptions(options);
         }
     }
 
-    public void printMergedMakeFile(PrintWriter pw) {
-        pw.append(defaultVersionsParser.getVersionsString());
-        pw.append(globalOptionsParser.getOptionsString());
-        List<PortOptionsParser> portList = new ArrayList<>(optionsParsersMap.values());
-        Collections.sort(portList);
-        for (PortOptionsParser port : portList) {
-            pw.append(port.getOptionsString());
+    private List<String> readConfigItems(String line, Iterator<String> makefileLinesIterator) {
+        String[] configItems = splitTokens(line);
+        var result = new ArrayList<>(Arrays.asList(configItems));
+        while (isMoreTokens(configItems, makefileLinesIterator)) {
+            var currentLine = makefileLinesIterator.next().trim();
+            configItems = splitTokens(currentLine);
+            result.addAll(Arrays.asList(configItems));
         }
+        return result;
+    }
+
+    public String[] splitTokens(String text) {
+        return SEPARATION_PATTERN.split(text);
+    }
+
+    public boolean isMoreTokens(String[] tokens, Iterator<String> lineIterator) {
+        return (tokens.length == 0 || PortsBuildConfig.NEXT_LINE.equals(tokens[tokens.length - 1]))
+                && lineIterator.hasNext();
+    }
+
+    public void parseOptionsFile(String portName, Iterator<String> lineIterator) {
+        while (lineIterator.hasNext()) {
+            String line = lineIterator.next().strip();
+            if (line.startsWith(OPTIONS_FILE_SET)) {
+                parsePortOptions(
+                        OptionStatus.SET,
+                        buildConfig.createIfAbsentPortOptionsState(portName),
+                        line.substring(OPTIONS_FILE_SET.length()),
+                        lineIterator
+                );
+            } else if (line.startsWith(OPTIONS_FILE_UNSET)) {
+                parsePortOptions(
+                        OptionStatus.UNSET,
+                        buildConfig.createIfAbsentPortOptionsState(portName),
+                        line.substring(OPTIONS_FILE_UNSET.length()),
+                        lineIterator
+                );
+            }
+        }
+    }
+
+    public enum OptionStatus {
+        SET, UNSET;
     }
 
 }
