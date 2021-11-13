@@ -21,24 +21,6 @@ public class PortsBuildConfig {
     private final OptionsState globalOptionsState = new OptionsState();
     private final SortedMap<String, OptionsState> portOptionsStates = new TreeMap<>();
 
-    public static String formatTokens(Iterable<String> tokens) {
-        if (!tokens.iterator().hasNext()) {
-            return "";
-        }
-        StringBuilder outputBuilder = new StringBuilder("\t");
-        int lineLength = 0;
-        for (String token : tokens) {
-            if (lineLength + token.length() > NEW_LINE_TRESHOLD && token.length() < NEW_LINE_TRESHOLD) {
-                outputBuilder.append(NEW_OPTION_LINE);
-                lineLength = 0;
-            }
-            outputBuilder.append(token).append(' ');
-            lineLength += token.length() + 1;
-        }
-        outputBuilder.append(NEW_LINE);
-        return outputBuilder.toString();
-    }
-
     public SortedSet<String> getDefaultVersions() {
         return defaultVersions;
     }
@@ -52,11 +34,8 @@ public class PortsBuildConfig {
     }
 
     public void deduplicateOptionsState() {
-        var enabledGlobalOptions = globalOptionsState.getEnabledOptions();
-        var disabledGlobalOptions = globalOptionsState.getDisabledOptions();
         for (var portOptionsState : portOptionsStates.values()) {
-            portOptionsState.removeEnabledOptions(enabledGlobalOptions);
-            portOptionsState.removeDisabledOptions(disabledGlobalOptions);
+            portOptionsState.removeDuplications(globalOptionsState);
         }
     }
 
@@ -101,22 +80,40 @@ public class PortsBuildConfig {
     }
 
     private void formatPortOptionsState(StringBuilder sb, String portId, OptionsState optionsState) {
-        var enabledOptions = optionsState.getEnabledOptions();
-        var disabledOptions = optionsState.getDisabledOptions();
-        if (enabledOptions.isEmpty() && disabledOptions.isEmpty()) {
+        if (optionsState.isEmpty()) {
             return;
         }
+        var enabledOptions = optionsState.getEnabledOptions();
         if (!enabledOptions.isEmpty()) {
             sb.append(portId)
                     .append(SET)
                     .append(formatTokens(enabledOptions));
         }
+        var disabledOptions = optionsState.getDisabledOptions();
         if (!disabledOptions.isEmpty()) {
             sb.append(portId)
                     .append(UNSET)
                     .append(formatTokens(disabledOptions));
         }
         sb.append(NEW_LINE);
+    }
+
+    private String formatTokens(Iterable<String> tokens) {
+        if (!tokens.iterator().hasNext()) {
+            return "";
+        }
+        StringBuilder outputBuilder = new StringBuilder("\t");
+        int lineLength = 0;
+        for (String token : tokens) {
+            if (lineLength + token.length() > NEW_LINE_TRESHOLD && token.length() < NEW_LINE_TRESHOLD) {
+                outputBuilder.append(NEW_OPTION_LINE);
+                lineLength = 0;
+            }
+            outputBuilder.append(token).append(' ');
+            lineLength += token.length() + 1;
+        }
+        outputBuilder.append(NEW_LINE);
+        return outputBuilder.toString();
     }
 
 }

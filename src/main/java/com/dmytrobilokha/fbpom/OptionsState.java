@@ -1,7 +1,7 @@
 package com.dmytrobilokha.fbpom;
 
 import java.util.Collection;
-import java.util.Set;
+import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -14,24 +14,21 @@ public class OptionsState {
         enabledOptions.addAll(options);
     }
 
-    public void removeEnabledOptions(Collection<String> options) {
-        enabledOptions.removeAll(options);
-    }
-
     public void addDisabledOptions(Collection<String> options) {
         disabledOptions.addAll(options);
     }
 
-    public void removeDisabledOptions(Collection<String> options) {
-        disabledOptions.removeAll(options);
+    public void removeDuplications(OptionsState globalState) {
+        enabledOptions.removeAll(globalState.enabledOptions);
+        disabledOptions.removeAll(globalState.disabledOptions);
     }
 
-    public Set<String> getEnabledOptions() {
-        return Set.copyOf(enabledOptions);
+    public List<String> getEnabledOptions() {
+        return List.copyOf(enabledOptions);
     }
 
-    public Set<String> getDisabledOptions() {
-        return Set.copyOf(disabledOptions);
+    public List<String> getDisabledOptions() {
+        return List.copyOf(disabledOptions);
     }
 
     public boolean isEmpty() {
