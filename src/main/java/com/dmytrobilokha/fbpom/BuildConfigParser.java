@@ -12,7 +12,7 @@ public class BuildConfigParser {
     private static final Pattern SET_PATTERN = Pattern.compile("_SET\\+=");
     private static final Pattern UNSET_PATTERN = Pattern.compile("_UNSET\\+=");
     private static final Pattern VERSION_PATTERN = Pattern.compile("[.\\p{Alnum}_-]+=[.\\p{Alnum}_-]+");
-    private static final Pattern OPTION_PATTERN = Pattern.compile("[\\p{Alnum}]+[\\p{Alnum}_-]+[\\p{Alnum}]+");
+    private static final Pattern OPTION_PATTERN = Pattern.compile("[\\p{Alnum}]+[\\p{Alnum}_-]*[\\p{Alnum}]+");
     private static final String OPTIONS_FILE_SET = "OPTIONS_FILE_SET+=";
     private static final String OPTIONS_FILE_UNSET = "OPTIONS_FILE_UNSET+=";
     private static final Pattern SEPARATION_PATTERN = Pattern.compile("\\s");

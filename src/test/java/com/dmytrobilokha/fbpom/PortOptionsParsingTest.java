@@ -44,6 +44,13 @@ public class PortOptionsParsingTest {
         TestUtil.assertNoEnabledOptions(optionsState);
     }
 
+    public void parsesTwoCharactersOption() {
+        parser.parseOptionsFile("category_port", List.of("OPTIONS_FILE_UNSET+=A4").iterator());
+        var optionsState = config.createIfAbsentPortOptionsState("category_port");
+        TestUtil.assertDisabledOptions(optionsState, "A4");
+        TestUtil.assertNoEnabledOptions(optionsState);
+    }
+
     public void parsesMultilineMakefileOption() {
         parser.parseMakefile(List.of("category_port_SET+=   AOPTION BOPTION \\", "\t\t\tCOPTION").iterator());
         var optionsState = config.createIfAbsentPortOptionsState("category_port");
