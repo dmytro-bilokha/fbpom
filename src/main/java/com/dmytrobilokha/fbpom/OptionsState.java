@@ -11,10 +11,12 @@ public class OptionsState {
     private final SortedSet<String> disabledOptions = new TreeSet<>();
 
     public void addEnabledOptions(Collection<String> options) {
+        disabledOptions.removeAll(options);
         enabledOptions.addAll(options);
     }
 
     public void addDisabledOptions(Collection<String> options) {
+        enabledOptions.removeAll(options);
         disabledOptions.addAll(options);
     }
 
